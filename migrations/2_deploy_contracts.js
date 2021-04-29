@@ -1,5 +1,5 @@
+const spawn = artifacts.require('Bitspawn');
 
-module.exports = function(deployer, network, accounts) {
-
-  // Mint the balance
+module.exports = function(deployer) {
+    deployer.deploy(spawn)
 };
