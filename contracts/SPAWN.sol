@@ -88,7 +88,7 @@ contract Bitspawn is ERC20("BitSpawn Token", "SPAWN"), DSAuth, DSStop {
     event Mint(address indexed guy, uint wad);
     event Burn(address indexed guy, uint wad);
 
-    uint256 MAX_SUPPLY = 2 * 10 ** 9 * 10 ** 18; // 1,000,000,000 SPAWN token supply as ERC20
+    uint256 MAX_SUPPLY = 2 * 10 ** 9 * 10 ** 18; // 2,000,000,000 SPAWN Token Max Supply
 
     // deployer address is the default admin(owner)
     // deployer address is the first address with MINT_BURN_ROLE role
