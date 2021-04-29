@@ -4,13 +4,14 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/access/Pausable.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
 contract DSAuth is Ownable, AccessControl {
     bytes32 public constant MINT_BURN_ROLE = keccak256("MINT_BURN_ROLE");
 
     // setOwner transfers the SPAWN token contract ownership to another address
     // along with grant new owner MINT_BURN_ROLE role and remove MINT_BURN_ROLE from old owner
+    // note: call transferOwnerShip will only change ownership without other roles
     function setOwner(address newOwner) public onlyOwner {
         require(newOwner != owner(), "New owner and current owner need to be different");
 
@@ -102,15 +103,6 @@ contract Bitspawn is ERC20("BitSpawn Token", "SPAWN"), DSAuth, DSStop {
 
     function transferFrom(address src, address dst, uint wad) public override whenNotPaused returns (bool) {
         return super.transferFrom(src, dst, wad);
-    }
-
-
-    function mint(uint wad) public {
-        mint(msg.sender, wad);
-    }
-
-    function burn(uint wad) public {
-        burn(msg.sender, wad);
     }
 
     function mint(address guy, uint wad) public whenNotPaused {
