@@ -83,12 +83,12 @@ contract DSStop is Pausable, Ownable {
     }
 }
 
-contract Bitspawn is ERC20("BitSpawn Token", "SPAWN"), DSAuth, DSStop {
+contract Bitspawn is ERC20("BitSpawn Token", "SPWN"), DSAuth, DSStop {
 
     event Mint(address indexed guy, uint wad);
     event Burn(address indexed guy, uint wad);
 
-    uint256 MAX_SUPPLY = 2 * 10 ** 9 * 10 ** 18; // 2,000,000,000 SPAWN Token Max Supply
+    uint256 MAX_SUPPLY = 2 * 10 ** 9 * 10 ** 18; // 2,000,000,000 SPWN Token Max Supply
 
     // deployer address is the default admin(owner)
     // deployer address is the first address with MINT_BURN_ROLE role
@@ -107,7 +107,7 @@ contract Bitspawn is ERC20("BitSpawn Token", "SPAWN"), DSAuth, DSStop {
 
     function mint(address guy, uint wad) public whenNotPaused {
         require(hasRole(MINT_BURN_ROLE, msg.sender), "Caller is not allowed to mint");
-        require(totalSupply() + wad <= MAX_SUPPLY, "Exceeds SPAWN token max totalSupply");
+        require(totalSupply() + wad <= MAX_SUPPLY, "Exceeds SPWN token max totalSupply");
 
         _mint(guy, wad);
 
