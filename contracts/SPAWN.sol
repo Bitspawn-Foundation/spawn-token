@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/security/Pausable.sol";
 contract DSAuth is Ownable, AccessControl {
     bytes32 public constant MINT_BURN_ROLE = keccak256("MINT_BURN_ROLE");
 
-    // setOwner transfers the SPAWN token contract ownership to another address
+    // setOwner transfers the SPWN token contract ownership to another address
     // along with grant new owner MINT_BURN_ROLE role and remove MINT_BURN_ROLE from old owner
     // note: call transferOwnerShip will only change ownership without other roles
     function setOwner(address newOwner) public onlyOwner {

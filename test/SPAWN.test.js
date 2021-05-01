@@ -31,7 +31,7 @@ contract('spawn', accounts => {
 
     it('2. get symbol', async () => {
         const tokenSymbol = await contract.symbol()
-        assert.equal(tokenSymbol, "SPAWN")
+        assert.equal(tokenSymbol, "SPWN")
     });
 
     it('3. get init stopped status', async () => {
@@ -180,13 +180,13 @@ contract('spawn', accounts => {
     });
 
     // mint & burn
-    it('15. admin mints for bob 100 SPAWN', async () => {
+    it('15. admin mints for bob 100 SPWN', async () => {
         await contract.mint(bob, mintAmount, {from: admin})
         const bobBalance = await contract.balanceOf(bob)
         assert.equal(bobBalance, mintAmount)
     });
 
-    it('16. bob mints for bob 100 SPAWN', async () => {
+    it('16. bob mints for bob 100 SPWN', async () => {
         await contract.mint(bob, mintAmount, {from: bob}).catch(err => {
             assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Caller is not allowed to mint -- Reason given: Caller is not allowed to mint.")
         })
@@ -194,7 +194,7 @@ contract('spawn', accounts => {
         assert.equal(bobBalance, zeroBalance)
     });
 
-    it('17. admin burns from bob 100 SPAWN', async () => {
+    it('17. admin burns from bob 100 SPWN', async () => {
         await contract.mint(bob, mintAmount, {from: admin})
         const bobBalanceAfterMint = await contract.balanceOf(bob)
         assert.equal(bobBalanceAfterMint, mintAmount)
@@ -204,7 +204,7 @@ contract('spawn', accounts => {
         assert.equal(bobBalanceAfterBurn, leftOverAmount)
     });
 
-    it('18. bob burns from bob 100 SPAWN', async () => {
+    it('18. bob burns from bob 100 SPWN', async () => {
         await contract.mint(bob, mintAmount, {from: admin})
         const bobBalanceAfterMint = await contract.balanceOf(bob)
         assert.equal(bobBalanceAfterMint, mintAmount)
@@ -386,7 +386,7 @@ contract('spawn', accounts => {
         assert.equal(totalSupply1, maxTotalSupply)
 
         await contract.mint(bob, mintAmount, {from: admin}).catch(err => {
-            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Exceeds SPAWN token max totalSupply -- Reason given: Exceeds SPAWN token max totalSupply.")
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Exceeds SPWN token max totalSupply -- Reason given: Exceeds SPWN token max totalSupply.")
         })
         const bobBalance = await contract.balanceOf(bob)
         assert.equal(bobBalance, zeroBalance)

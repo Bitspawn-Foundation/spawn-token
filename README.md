@@ -1,6 +1,6 @@
-# SPAWN-token
+# SPWN-token
 
-ERC20 SPAWN token
+ERC20 SPWN token
 
 You need `npm` to use the development environment.
 
