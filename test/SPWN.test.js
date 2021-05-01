@@ -1,7 +1,7 @@
 const spawn = artifacts.require('Bitspawn');
 const BigNumber = require('bignumber.js');
 
-contract('spawn', accounts => {
+contract('spwn token tests', accounts => {
     const [admin, bob, ...rest] = accounts;
 
     const DEFAULT_ADMIN_ROLE = "0x0000000000000000000000000000000000000000000000000000000000000000"
