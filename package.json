@@ -1,7 +1,7 @@
 {
   "name": "spawn-token",
   "version": "1.0.0",
-  "description": "ERC20 SPAWN token",
+  "description": "ERC20 SPWN token",
   "main": "truffle-config.js",
   "directories": {
     "test": "test"
