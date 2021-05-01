@@ -9,7 +9,7 @@ You need `npm` to use the development environment.
 Make sure to have `ganache-cli` and `truffle` installed via npm.
 
 ```bash
-$ npm i -g ganache-cli truffle@5.0.35
+$ npm i -g ganache-cli truffle@5.2.4
 $ npm i
 ```
 
