@@ -417,4 +417,37 @@ contract('spwn token tests', accounts => {
         const mr = await contract.MINT_BURN_ROLE()
         assert.equal(MINT_BURN_ROLE, mr)
     });
+
+    it('29. transfer before & after stop', async () => {
+        const pauseStatusBefore1 = await contract.stopped()
+        const pauseStatusBefore2 = await contract.paused()
+        assert.equal(pauseStatusBefore1, pauseStatusBefore2)
+        assert.equal(pauseStatusBefore2, false)
+
+        await contract.mint(admin, mintAmount, {from: admin})
+        const adminBalanceBefore = await contract.balanceOf(admin)
+        assert.equal(adminBalanceBefore, mintAmount)
+
+        const bobBalanceBeforeStop = await contract.balanceOf(bob)
+        assert.equal(bobBalanceBeforeStop, zeroBalance)
+
+        // transfer before stop
+        await contract.transfer(bob, leftOverAmount, {from: admin})
+        const bobBalanceBeforeStop2 = await contract.balanceOf(bob)
+        assert.equal(bobBalanceBeforeStop2, leftOverAmount)
+
+        await contract.stop()
+
+        const pauseStatusAfter1 = await contract.stopped()
+        const pauseStatusAfter2 = await contract.paused()
+        assert.equal(pauseStatusAfter1, pauseStatusAfter2)
+        assert.equal(pauseStatusAfter2, true)
+
+        // transfer after stop
+        await contract.transfer(bob, leftOverAmount, {from: admin}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Pausable: paused -- Reason given: Pausable: paused.")
+        })
+        const bobBalanceAfterStop = await contract.balanceOf(bob)
+        assert.equal(bobBalanceAfterStop, leftOverAmount)
+    });
 });

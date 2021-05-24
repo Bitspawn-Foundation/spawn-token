@@ -27,6 +27,10 @@ contract Bitspawn is ERC20("BitSpawn Token", "SPWN"), DSAuth, DSStop {
         return super.transferFrom(src, dst, wad);
     }
 
+    function transfer(address dst, uint wad) public override whenNotPaused returns (bool) {
+        return super.transfer(dst, wad);
+    }
+
     function mint(address guy, uint wad) public whenNotPaused {
         require(hasRole(MINT_BURN_ROLE, msg.sender), "Caller is not allowed to mint");
         require(totalSupply() + wad <= MAX_SUPPLY, "Exceeds SPWN token max totalSupply");
