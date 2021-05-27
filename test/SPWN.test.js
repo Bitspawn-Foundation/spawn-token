@@ -127,7 +127,7 @@ contract('spwn token tests', accounts => {
         })
     });
 
-    it('9.6. admin accepts the ownership to bob', async () => {
+    it('9.6. bob accepts the ownership', async () => {
         await contract.transferOwnership(bob, {from: admin})
         const currentOwner = await contract.owner()
         assert.equal(currentOwner, admin)
