@@ -2,10 +2,11 @@ const spawn = artifacts.require('Bitspawn');
 const BigNumber = require('bignumber.js');
 
 contract('spwn token tests', accounts => {
-    const [admin, bob, ...rest] = accounts;
+    const [admin, bob, cetol, ...rest] = accounts;
 
     const DEFAULT_ADMIN_ROLE = "0x0000000000000000000000000000000000000000000000000000000000000000"
     const MINT_BURN_ROLE = "0xa60cb0df7bc178038b993aa2e0df2e2cfb6627f4695e4261227d47422ae7e2a6"
+    const addressZero = "0x0000000000000000000000000000000000000000"
 
     const tokenAmountBase = 10 ** 18
     const mintAmount = new BigNumber(100 * tokenAmountBase).toFixed()
@@ -67,10 +68,74 @@ contract('spwn token tests', accounts => {
     });
 
     // ownership change
-    it('9. change ownership from admin to bob', async () => {
-        await contract.setOwner(bob, {from: admin})
-        const newOwner = await contract.owner()
-        assert.equal(newOwner, bob)
+    it('9. admin adds bob as the pending owner', async () => {
+        const currentPendingOwner1 = await contract.getPendingOwner({from: admin})
+        assert.equal(currentPendingOwner1, addressZero)
+
+        await contract.transferOwnership(bob, {from: admin})
+        const currentOwner = await contract.owner()
+        assert.equal(currentOwner, admin)
+
+        const currentPendingOwner2 = await contract.getPendingOwner({from: admin})
+        assert.equal(currentPendingOwner2, bob)
+    });
+
+    it('9.1. admin adds address(0) as pending owner', async () => {
+        await contract.transferOwnership(addressZero, {from: admin}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Pending owner can not be zero address -- Reason given: Pending owner can not be zero address.")
+        })
+        const currentOwner = await contract.owner()
+        assert.equal(currentOwner, admin)
+    });
+
+    it('9.2. admin adds himself as pending owner', async () => {
+        await contract.transferOwnership(admin, {from: admin}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Pending owner and current owner need to be different -- Reason given: Pending owner and current owner need to be different.")
+        })
+        const currentOwner = await contract.owner()
+        assert.equal(currentOwner, admin)
+    });
+
+    it('9.3. admin adds bob as the pending owner then try to replace it with cetol', async () => {
+        await contract.transferOwnership(bob, {from: admin})
+        const currentOwner1 = await contract.owner()
+        assert.equal(currentOwner1, admin)
+
+        const currentPendingOwner1 = await contract.getPendingOwner({from: admin})
+        assert.equal(currentPendingOwner1, bob)
+
+        await contract.transferOwnership(cetol, {from: admin})
+
+        const currentPendingOwner2 = await contract.getPendingOwner({from: admin})
+        assert.equal(currentPendingOwner2, cetol)
+    });
+
+    it('9.4. bob tries to add pending owner', async () => {
+        await contract.transferOwnership(cetol, {from: bob}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Ownable: caller is not the owner -- Reason given: Ownable: caller is not the owner.")
+        })
+        const currentOwner1 = await contract.owner()
+        assert.equal(currentOwner1, admin)
+
+        const currentPendingOwner1 = await contract.getPendingOwner({from: admin})
+        assert.equal(currentPendingOwner1, addressZero)
+    });
+
+    it('9.5. bob tries to query pending owner', async () => {
+        await contract.getPendingOwner({from: bob}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Ownable: caller is not the owner")
+        })
+    });
+
+    it('9.6. bob accepts the ownership', async () => {
+        await contract.transferOwnership(bob, {from: admin})
+        const currentOwner = await contract.owner()
+        assert.equal(currentOwner, admin)
+
+        const pendingOwner1 = await contract.getPendingOwner({from: admin})
+        assert.equal(pendingOwner1, bob)
+
+        await contract.acceptOwnership({from: bob})
 
         // new owner has default admin and mint_burn roles
         const hasAdminRole = await contract.hasRole(DEFAULT_ADMIN_ROLE, bob)
@@ -83,14 +148,35 @@ contract('spwn token tests', accounts => {
         assert.equal(hasAdminRole_old, false)
         const hasMintBurnRole_old = await contract.hasRole(MINT_BURN_ROLE, admin)
         assert.equal(hasMintBurnRole_old, false)
+
+        // pending owner should be zero address
+        const pendingOwner = await contract.getPendingOwner({from: bob})
+        assert.equal(pendingOwner, addressZero)
     });
 
-    it('10. bob calls to change ownership to himself', async () => {
-        await contract.setOwner(bob, {from: bob}).catch(err => {
-            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Ownable: caller is not the owner -- Reason given: Ownable: caller is not the owner.")
+    it('10. cetol calls to accept the ownership to himself after admin sets bob as pending owner', async () => {
+        await contract.transferOwnership(bob, {from: admin})
+        const currentOwner = await contract.owner()
+        assert.equal(currentOwner, admin)
+
+        const pendingOwner = await contract.getPendingOwner({from: admin})
+        assert.equal(pendingOwner, bob)
+
+        await contract.acceptOwnership({from: cetol}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Only pending owner is able to accept the ownership -- Reason given: Only pending owner is able to accept the ownership.")
         })
         const newOwner = await contract.owner()
         assert.equal(newOwner, admin)
+
+        const pendingOwner2 = await contract.getPendingOwner({from: admin})
+        assert.equal(pendingOwner2, bob)
+
+        await contract.acceptOwnership({from: bob})
+        const newOwner1 = await contract.owner()
+        assert.equal(newOwner1, bob)
+
+        const pendingOwner3 = await contract.getPendingOwner({from: bob})
+        assert.equal(pendingOwner3, addressZero)
     });
 
     // ERC20 functions

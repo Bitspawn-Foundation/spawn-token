@@ -15,6 +15,7 @@ contract Bitspawn is ERC20("BitSpawn Token", "SPWN"), DSAuth, DSStop {
     // deployer address is the default admin(owner)
     // deployer address is the first address with MINT_BURN_ROLE role
     constructor () {
+
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantAccess(MINT_BURN_ROLE, msg.sender);
     }

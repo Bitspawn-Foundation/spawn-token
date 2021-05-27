@@ -7,21 +7,57 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 contract DSAuth is Ownable, AccessControl {
     bytes32 public constant MINT_BURN_ROLE = keccak256("MINT_BURN_ROLE");
 
-    // setOwner transfers the SPWN token contract ownership to another address
+    address private _pendingOwner;
+    address private _owner;
+
+    event TransferOwnerShip(address indexed _newOwner);
+    event AcceptOwnerShip(address indexed _oldOwner, address indexed _newOwner);
+
+    constructor () {
+        _owner = msg.sender;
+        _pendingOwner = address(0);
+
+        emit TransferOwnerShip(msg.sender);
+    }
+
+    // transferOwnership add a pending owner
+    function transferOwnership(address newOwner) public override onlyOwner {
+        require(newOwner != owner(), "Pending owner and current owner need to be different");
+        require(newOwner != address(0), "Pending owner can not be zero address");
+
+        _pendingOwner = newOwner;
+
+        _setupRole(DEFAULT_ADMIN_ROLE, _pendingOwner);
+
+        emit TransferOwnerShip(newOwner);
+    }
+
+    function getPendingOwner() public view onlyOwner returns (address) {
+        return _pendingOwner;
+    }
+
+    function owner() public override view returns (address) {
+        return _owner;
+    }
+
+    // acceptOwnership allows the pending owner to accept the ownership of the SPWN token contract
     // along with grant new owner MINT_BURN_ROLE role and remove MINT_BURN_ROLE from old owner
-    // note: call transferOwnerShip will only change ownership without other roles
-    function setOwner(address newOwner) public onlyOwner {
-        require(newOwner != owner(), "New owner and current owner need to be different");
+    function acceptOwnership() public {
+        require(_pendingOwner != address(0), "Please set pending owner first");
+        require(_pendingOwner == msg.sender, "Only pending owner is able to accept the ownership");
 
         address oldOwner = owner();
 
-        transferOwnership(newOwner);
+        _owner = _pendingOwner;
 
-        _grantAccess(MINT_BURN_ROLE, newOwner);
+        _grantAccess(MINT_BURN_ROLE, _pendingOwner);
+
         _revokeAccess(MINT_BURN_ROLE, oldOwner);
-
-        _setupRole(DEFAULT_ADMIN_ROLE, newOwner);
         _revokeAccess(DEFAULT_ADMIN_ROLE, oldOwner);
+
+        emit AcceptOwnerShip(oldOwner, _pendingOwner);
+
+        _pendingOwner = address(0);
     }
 
     // setAuthority performs the same action as grantMintBurnRole
