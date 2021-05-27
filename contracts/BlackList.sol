@@ -10,6 +10,8 @@ contract BlackList is Ownable {
     event RemovedBlackList(address _user);
 
     function addBlackList(address _evilUser) public onlyOwner {
+        require(owner() != _evilUser, "Can not add owner to blackList");
+
         isBlackListed[_evilUser] = true;
 
         emit AddedBlackList(_evilUser);

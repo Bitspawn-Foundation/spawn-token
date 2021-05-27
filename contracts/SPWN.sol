@@ -2,13 +2,15 @@
 pragma solidity 0.8.3;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "./DSAuth.sol";
 import "./DSStop.sol";
 
-contract Bitspawn is ERC20("BitSpawn Token", "SPWN"), DSAuth, DSStop {
+contract Bitspawn is ERC20("BitSpawn Token", "SPWN"), ERC20Burnable, DSAuth, DSStop {
 
     event Mint(address indexed guy, uint wad);
     event Burn(address indexed guy, uint wad);
+    event BurnFrom(address indexed allowanceOwner, address spender, uint wad);
     event DestroyedBlackFunds(address _blackListedUser, uint _balance);
 
     uint256 MAX_SUPPLY = 2 * 10 ** 9 * 10 ** 18; // 2,000,000,000 SPWN Token Max Supply
@@ -52,13 +54,20 @@ contract Bitspawn is ERC20("BitSpawn Token", "SPWN"), DSAuth, DSStop {
         emit Mint(guy, wad);
     }
 
-    function burn(address guy, uint wad) public whenNotPaused {
+    function destroy(uint wad) public whenNotPaused {
         require(!isBlackListed[msg.sender], "Caller is in blackList");
-        require(hasRole(MINT_BURN_ROLE, msg.sender), "Caller is not allowed to burn");
 
-        _burn(guy, wad);
+        burn(wad);
 
-        emit Burn(guy, wad);
+        emit Burn(msg.sender, wad);
+    }
+
+    function destroyFrom(address allowanceOwner, uint wad) public whenNotPaused {
+        require(!isBlackListed[msg.sender], "Caller is in blackList");
+
+        burnFrom(allowanceOwner, wad);
+
+        emit BurnFrom(allowanceOwner, msg.sender, wad);
     }
 
     function destroyBlackFunds(address _blackListedUser) public onlyOwner {
