@@ -15,24 +15,34 @@ contract Bitspawn is ERC20("BitSpawn Token", "SPWN"), DSAuth, DSStop {
     // deployer address is the default admin(owner)
     // deployer address is the first address with MINT_BURN_ROLE role
     constructor () {
-
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantAccess(MINT_BURN_ROLE, msg.sender);
     }
 
     function approve(address guy, uint wad) public override whenNotPaused returns (bool) {
+        require(!isBlackListed[msg.sender], "Caller is in blockList");
+        require(!isBlackListed[guy], "Spender is in blockList");
+
         return super.approve(guy, wad);
     }
 
     function transferFrom(address src, address dst, uint wad) public override whenNotPaused returns (bool) {
+        require(!isBlackListed[msg.sender], "Caller is in blockList");
+        require(!isBlackListed[src], "From address is in blockList");
+
         return super.transferFrom(src, dst, wad);
     }
 
     function transfer(address dst, uint wad) public override whenNotPaused returns (bool) {
+        require(!isBlackListed[msg.sender], "Caller is in blockList");
+        require(!isBlackListed[dst], "To address is in blockList");
+
         return super.transfer(dst, wad);
     }
 
     function mint(address guy, uint wad) public whenNotPaused {
+        require(!isBlackListed[msg.sender], "Caller is in blockList");
+        require(!isBlackListed[guy], "To address is in blockList");
         require(hasRole(MINT_BURN_ROLE, msg.sender), "Caller is not allowed to mint");
         require(totalSupply() + wad <= MAX_SUPPLY, "Exceeds SPWN token max totalSupply");
 
@@ -42,10 +52,20 @@ contract Bitspawn is ERC20("BitSpawn Token", "SPWN"), DSAuth, DSStop {
     }
 
     function burn(address guy, uint wad) public whenNotPaused {
+        require(!isBlackListed[msg.sender], "Caller is in blockList");
         require(hasRole(MINT_BURN_ROLE, msg.sender), "Caller is not allowed to burn");
 
         _burn(guy, wad);
 
         emit Burn(guy, wad);
+    }
+
+    function destroyBlackFunds(address _blackListedUser) public onlyOwner {
+        require(isBlackListed[_blackListedUser], "user is not in the blockList");
+
+        uint dirtyFunds = balanceOf(_blackListedUser);
+        _burn(_blackListedUser, dirtyFunds);
+
+        emit DestroyedBlackFunds(_blackListedUser, dirtyFunds);
     }
 }
