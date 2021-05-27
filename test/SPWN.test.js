@@ -405,7 +405,7 @@ contract('spwn token tests', accounts => {
         assert.equal(bobBalance, zeroBalance)
     });
 
-    it('17. bob destroys his 100 SPWN', async () => {
+    it('17. bob burns his 100 SPWN', async () => {
         await contract.mint(bob, mintAmount, {from: admin})
         const bobBalanceAfterMint = await contract.balanceOf(bob)
         assert.equal(bobBalanceAfterMint, mintAmount)
@@ -415,7 +415,7 @@ contract('spwn token tests', accounts => {
         assert.equal(bobBalanceAfterBurn, leftOverAmount)
     });
 
-    it('18. admin approves bob 50 SPWN and bob destroys all 50 SPWN allowance from admin', async () => {
+    it('18. admin approves bob 50 SPWN and bob burnFrom all 50 SPWN allowance from admin', async () => {
         // mint 100 to admin
         await contract.mint(admin, mintAmount, {from: admin})
         const adminBalanceAfterMint = await contract.balanceOf(admin)
@@ -439,7 +439,7 @@ contract('spwn token tests', accounts => {
         assert.equal(adminBalanceAfterBurnFrom, allowanceAmount)
     });
 
-    it('18.1. admin approves bob 50 SPWN and bob tries to destroy 100 SPWN allowance from admin', async () => {
+    it('18.1. admin approves bob 50 SPWN and bob tries to burnFrom 100 SPWN allowance from admin', async () => {
         // mint 100 to admin
         await contract.mint(admin, mintAmount, {from: admin})
         const adminBalanceAfterMint = await contract.balanceOf(admin)
@@ -493,7 +493,7 @@ contract('spwn token tests', accounts => {
         })
     });
 
-    it('18.4. bob tries to destroy after been added to blackList', async () => {
+    it('18.4. bob tries to burn after been added to blackList', async () => {
         // mint 100 to bob
         await contract.mint(bob, mintAmount, {from: admin})
         const bobBalanceAfterMint = await contract.balanceOf(bob)
@@ -508,12 +508,12 @@ contract('spwn token tests', accounts => {
         const bobBlackListStatus2 = await contract.getBlackListStatus(bob)
         assert.equal(bobBlackListStatus2, true)
 
-        await contract.destroy(mintAmount, {from: bob}).catch(err => {
+        await contract.burn(mintAmount, {from: bob}).catch(err => {
             assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Caller is in blackList -- Reason given: Caller is in blackList.");
         })
     });
 
-    it('18.5. bob tries to destroy his allowance from admin after been added to blackList', async () => {
+    it('18.5. bob tries to burn his allowance from admin after been added to blackList', async () => {
         // admin approves 50 SPWN to bob
         await contract.approve(bob, allowanceAmount, {from: admin})
 
@@ -529,7 +529,7 @@ contract('spwn token tests', accounts => {
         const bobBlackListStatus2 = await contract.getBlackListStatus(bob)
         assert.equal(bobBlackListStatus2, true)
 
-        await contract.destroyFrom(admin, allowanceAmount, {from: bob}).catch(err => {
+        await contract.burnFrom(admin, allowanceAmount, {from: bob}).catch(err => {
             assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Caller is in blackList -- Reason given: Caller is in blackList.");
         })
     });
@@ -696,7 +696,7 @@ contract('spwn token tests', accounts => {
         const totalSupply2 = await contract.totalSupply()
         assert.equal(totalSupply2, maxTotalSupply)
 
-        await contract.destroy(mintAmount, {from: admin})
+        await contract.burn(mintAmount, {from: admin})
 
         await contract.mint(bob, mintAmount, {from: admin})
         const bobBalanceAfter = await contract.balanceOf(bob)

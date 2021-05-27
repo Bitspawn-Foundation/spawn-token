@@ -54,18 +54,18 @@ contract Bitspawn is ERC20("BitSpawn Token", "SPWN"), ERC20Burnable, DSAuth, DSS
         emit Mint(guy, wad);
     }
 
-    function destroy(uint wad) public whenNotPaused {
+    function burn(uint wad) public override whenNotPaused {
         require(!isBlackListed[msg.sender], "Caller is in blackList");
 
-        burn(wad);
+        super.burn(wad);
 
         emit Burn(msg.sender, wad);
     }
 
-    function destroyFrom(address allowanceOwner, uint wad) public whenNotPaused {
+    function burnFrom(address allowanceOwner, uint wad) public override whenNotPaused {
         require(!isBlackListed[msg.sender], "Caller is in blackList");
 
-        burnFrom(allowanceOwner, wad);
+        super.burnFrom(allowanceOwner, wad);
 
         emit BurnFrom(allowanceOwner, msg.sender, wad);
     }
