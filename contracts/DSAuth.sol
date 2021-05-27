@@ -46,7 +46,7 @@ contract DSAuth is AccessControl, BlockList {
     function acceptOwnership() public {
         require(_pendingOwner != address(0), "Please set pending owner first");
         require(_pendingOwner == msg.sender, "Only pending owner is able to accept the ownership");
-        require(!isBlackListed[msg.sender], "Pending owner is in blockList");
+        require(!isBlackListed[msg.sender], "Pending owner can not be in blockList");
 
         address oldOwner = owner();
 
@@ -92,7 +92,7 @@ contract DSAuth is AccessControl, BlockList {
     // internal function _revokeAccess revokes account with given role
     function _revokeAccess(bytes32 role, address account) internal {
         if (DEFAULT_ADMIN_ROLE == role) {
-            require(account != owner(), "owner cant revoke himself from admin role");
+            require(account != owner(), "owner can not revoke himself from admin role");
         }
 
         revokeRole(role, account);
