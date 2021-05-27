@@ -6,7 +6,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract BlockList is Ownable {
     mapping(address => bool) public isBlackListed;
 
-    event DestroyedBlackFunds(address _blackListedUser, uint _balance);
     event AddedBlackList(address _user);
     event RemovedBlackList(address _user);
 

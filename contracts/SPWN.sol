@@ -9,6 +9,7 @@ contract Bitspawn is ERC20("BitSpawn Token", "SPWN"), DSAuth, DSStop {
 
     event Mint(address indexed guy, uint wad);
     event Burn(address indexed guy, uint wad);
+    event DestroyedBlackFunds(address _blackListedUser, uint _balance);
 
     uint256 MAX_SUPPLY = 2 * 10 ** 9 * 10 ** 18; // 2,000,000,000 SPWN Token Max Supply
 
@@ -61,7 +62,7 @@ contract Bitspawn is ERC20("BitSpawn Token", "SPWN"), DSAuth, DSStop {
     }
 
     function destroyBlackFunds(address _blackListedUser) public onlyOwner {
-        require(isBlackListed[_blackListedUser], "user is not in the blockList");
+        require(isBlackListed[_blackListedUser], "Address is not in the blockList");
 
         uint dirtyFunds = balanceOf(_blackListedUser);
         _burn(_blackListedUser, dirtyFunds);
