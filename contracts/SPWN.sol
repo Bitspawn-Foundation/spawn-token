@@ -21,29 +21,29 @@ contract Bitspawn is ERC20("BitSpawn Token", "SPWN"), DSAuth, DSStop {
     }
 
     function approve(address guy, uint wad) public override whenNotPaused returns (bool) {
-        require(!isBlackListed[msg.sender], "Caller is in blockList");
-        require(!isBlackListed[guy], "Spender is in blockList");
+        require(!isBlackListed[msg.sender], "Caller is in blackList");
+        require(!isBlackListed[guy], "Spender is in blackList");
 
         return super.approve(guy, wad);
     }
 
     function transferFrom(address src, address dst, uint wad) public override whenNotPaused returns (bool) {
-        require(!isBlackListed[msg.sender], "Caller is in blockList");
-        require(!isBlackListed[src], "From address is in blockList");
+        require(!isBlackListed[msg.sender], "Caller is in blackList");
+        require(!isBlackListed[src], "From address is in blackList");
 
         return super.transferFrom(src, dst, wad);
     }
 
     function transfer(address dst, uint wad) public override whenNotPaused returns (bool) {
-        require(!isBlackListed[msg.sender], "Caller is in blockList");
-        require(!isBlackListed[dst], "To address is in blockList");
+        require(!isBlackListed[msg.sender], "Caller is in blackList");
+        require(!isBlackListed[dst], "To address is in blackList");
 
         return super.transfer(dst, wad);
     }
 
     function mint(address guy, uint wad) public whenNotPaused {
-        require(!isBlackListed[msg.sender], "Caller is in blockList");
-        require(!isBlackListed[guy], "To address is in blockList");
+        require(!isBlackListed[msg.sender], "Caller is in blackList");
+        require(!isBlackListed[guy], "To address is in blackList");
         require(hasRole(MINT_BURN_ROLE, msg.sender), "Caller is not allowed to mint");
         require(totalSupply() + wad <= MAX_SUPPLY, "Exceeds SPWN token max totalSupply");
 
@@ -53,7 +53,7 @@ contract Bitspawn is ERC20("BitSpawn Token", "SPWN"), DSAuth, DSStop {
     }
 
     function burn(address guy, uint wad) public whenNotPaused {
-        require(!isBlackListed[msg.sender], "Caller is in blockList");
+        require(!isBlackListed[msg.sender], "Caller is in blackList");
         require(hasRole(MINT_BURN_ROLE, msg.sender), "Caller is not allowed to burn");
 
         _burn(guy, wad);
@@ -62,7 +62,7 @@ contract Bitspawn is ERC20("BitSpawn Token", "SPWN"), DSAuth, DSStop {
     }
 
     function destroyBlackFunds(address _blackListedUser) public onlyOwner {
-        require(isBlackListed[_blackListedUser], "Address is not in the blockList");
+        require(isBlackListed[_blackListedUser], "Address is not in the blackList");
 
         uint dirtyFunds = balanceOf(_blackListedUser);
         _burn(_blackListedUser, dirtyFunds);

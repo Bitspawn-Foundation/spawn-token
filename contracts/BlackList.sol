@@ -3,7 +3,7 @@ pragma solidity 0.8.3;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract BlockList is Ownable {
+contract BlackList is Ownable {
     mapping(address => bool) public isBlackListed;
 
     event AddedBlackList(address _user);

@@ -2,9 +2,9 @@
 pragma solidity 0.8.3;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./BlockList.sol";
+import "./BlackList.sol";
 
-contract DSAuth is AccessControl, BlockList {
+contract DSAuth is AccessControl, BlackList {
     bytes32 public constant MINT_BURN_ROLE = keccak256("MINT_BURN_ROLE");
 
     address private _pendingOwner;
@@ -22,7 +22,7 @@ contract DSAuth is AccessControl, BlockList {
 
     // transferOwnership add a pending owner
     function transferOwnership(address newOwner) public override onlyOwner {
-        require(!isBlackListed[newOwner], "Pending owner can not be in blockList");
+        require(!isBlackListed[newOwner], "Pending owner can not be in blackList");
         require(newOwner != owner(), "Pending owner and current owner need to be different");
         require(newOwner != address(0), "Pending owner can not be zero address");
 
@@ -46,7 +46,7 @@ contract DSAuth is AccessControl, BlockList {
     function acceptOwnership() public {
         require(_pendingOwner != address(0), "Please set pending owner first");
         require(_pendingOwner == msg.sender, "Only pending owner is able to accept the ownership");
-        require(!isBlackListed[msg.sender], "Pending owner can not be in blockList");
+        require(!isBlackListed[msg.sender], "Pending owner can not be in blackList");
 
         address oldOwner = owner();
 
@@ -65,14 +65,14 @@ contract DSAuth is AccessControl, BlockList {
     // setAuthority performs the same action as grantMintBurnRole
     // we need setAuthority() only because the backward compatibility with previous version contract
     function setAuthority(address authorityAddress) public onlyOwner {
-        require(!isBlackListed[authorityAddress], "AuthorityAddress is in blockList");
+        require(!isBlackListed[authorityAddress], "AuthorityAddress is in blackList");
 
         grantMintBurnRole(authorityAddress);
     }
 
     // grantMintBurnRole grants the MINT_BURN_ROLE role to an address
     function grantMintBurnRole(address account) public onlyOwner {
-        require(!isBlackListed[account], "account is in blockList");
+        require(!isBlackListed[account], "account is in blackList");
 
         _grantAccess(MINT_BURN_ROLE, account);
     }
