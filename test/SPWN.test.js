@@ -10,7 +10,9 @@ contract('spwn token tests', accounts => {
 
     const tokenAmountBase = 10 ** 18
     const mintAmount = new BigNumber(100 * tokenAmountBase).toFixed()
+    const doubleMintAmount = new BigNumber(100 * tokenAmountBase).toFixed()
     const burnAmount = new BigNumber(90 * tokenAmountBase).toFixed()
+    const allowanceAmount = new BigNumber(50 * tokenAmountBase).toFixed()
     const leftOverAmount = new BigNumber(10 * tokenAmountBase).toFixed()
     const decreaseAllowanceAmount = new BigNumber(50 * tokenAmountBase).toFixed()
     const zeroBalance = 0
@@ -154,7 +156,7 @@ contract('spwn token tests', accounts => {
         assert.equal(pendingOwner, addressZero)
     });
 
-    it('10. cetol calls to accept the ownership to himself after admin sets bob as pending owner', async () => {
+    it('10. cetol accepts the ownership to himself after admin sets bob as pending owner', async () => {
         await contract.transferOwnership(bob, {from: admin})
         const currentOwner = await contract.owner()
         assert.equal(currentOwner, admin)
@@ -195,6 +197,44 @@ contract('spwn token tests', accounts => {
         assert.equal(bobBalanceAfter, burnAmount)
     });
 
+    it('11.1. transfer: bob is in blackList and tries to transfer to cetol', async () => {
+        // give bob some money
+        await contract.mint(bob, mintAmount, {from: admin})
+        const bobBalanceBefore = await contract.balanceOf(bob)
+        assert.equal(bobBalanceBefore, mintAmount)
+
+        // add bob to blackList
+        await contract.addBlackList(bob, {from: admin})
+        const bobBlackListStatus = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus, true)
+
+        await contract.transfer(cetol, burnAmount, {from: bob}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Caller is in blackList -- Reason given: Caller is in blackList.")
+        })
+
+        const bobBalanceAfter = await contract.balanceOf(bob)
+        assert.equal(bobBalanceAfter, mintAmount)
+    });
+
+    it('11.2. transfer: bob is in blackList and admin tries to transfer to bob', async () => {
+        // give admin some money
+        await contract.mint(admin, mintAmount, {from: admin})
+        const adminBalanceBefore = await contract.balanceOf(admin)
+        assert.equal(adminBalanceBefore, mintAmount)
+
+        // add bob to blackList
+        await contract.addBlackList(bob, {from: admin})
+        const bobBlackListStatus = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus, true)
+
+        await contract.transfer(bob, burnAmount, {from: admin}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert To address is in blackList -- Reason given: To address is in blackList.")
+        })
+
+        const adminBalanceAfter = await contract.balanceOf(admin)
+        assert.equal(adminBalanceAfter, mintAmount)
+    });
+
     it('12. transferForm: admin to bob', async () => {
         await contract.mint(admin, mintAmount, {from: admin})
         const adminBalanceBefore = await contract.balanceOf(admin)
@@ -222,7 +262,55 @@ contract('spwn token tests', accounts => {
         assert.equal(bobBalanceAfter2, burnAmount)
     });
 
-    it('13. admin grants allowance to bob 100 SPWN', async () => {
+    it('12.1. transferForm: allowance(bob=>cetol) bob is in blackList and cetol tries to transferFrom admin', async () => {
+        const aTOb_allowanceBefore = await contract.allowance(bob, cetol)
+        assert.equal(aTOb_allowanceBefore, zeroBalance)
+
+        // approve 100 from bob to cetol
+        await contract.approve(cetol, mintAmount, {from: bob})
+
+        const aTOb_allowanceAfter = await contract.allowance(bob, cetol)
+        assert.equal(aTOb_allowanceAfter, mintAmount)
+
+        // add bob in blackList
+        const bobBlackListStatus = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus, false)
+
+        await contract.addBlackList(bob, {from: admin})
+
+        const bobBlackListStatus2 = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus2, true)
+
+        await contract.transferFrom(bob, cetol, burnAmount, {from: cetol}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert From address is in blackList -- Reason given: From address is in blackList.")
+        })
+    });
+
+    it('12.2. transferForm: allowance(admin=>bob) bob is in blackList and bob tries to transferFrom admin', async () => {
+        const aTOb_allowanceBefore = await contract.allowance(admin, bob)
+        assert.equal(aTOb_allowanceBefore, zeroBalance)
+
+        // approve 100 from admin to bob
+        await contract.approve(bob, mintAmount, {from: admin})
+
+        const aTOb_allowanceAfter = await contract.allowance(admin, bob)
+        assert.equal(aTOb_allowanceAfter, mintAmount)
+
+        // add bob in blackList
+        const bobBlackListStatus = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus, false)
+
+        await contract.addBlackList(bob, {from: admin})
+
+        const bobBlackListStatus2 = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus2, true)
+
+        await contract.transferFrom(admin, bob, burnAmount, {from: bob}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Caller is in blackList -- Reason given: Caller is in blackList.")
+        })
+    });
+
+    it('13. admin increase allowance to bob with 100 SPWN', async () => {
         await contract.mint(admin, mintAmount, {from: admin})
         const adminBalanceBefore = await contract.balanceOf(admin)
         const bobBalanceBefore = await contract.balanceOf(bob)
@@ -248,6 +336,44 @@ contract('spwn token tests', accounts => {
         const bobBalanceAfter = await contract.balanceOf(bob)
         assert.equal(adminBalanceAfter, zeroBalance)
         assert.equal(bobBalanceAfter, mintAmount)
+    });
+
+    it('13.1. admin approves bob 100 SPWN', async () => {
+        const aTOb_allowanceBefore = await contract.allowance(admin, bob)
+        assert.equal(aTOb_allowanceBefore, zeroBalance)
+
+        await contract.approve(bob, mintAmount, {from: admin})
+
+        const aTOb_allowanceAfter = await contract.allowance(admin, bob)
+        assert.equal(aTOb_allowanceAfter, mintAmount)
+    });
+
+    it('13.2. bob is in blackList and tries to approve cetol', async () => {
+        const bobBlackListStatus = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus, false)
+
+        await contract.addBlackList(bob, {from: admin})
+
+        const bobBlackListStatus2 = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus2, true)
+
+        await contract.approve(cetol, mintAmount, {from: bob}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Caller is in blackList -- Reason given: Caller is in blackList.");
+        })
+    });
+
+    it('13.3. bob is in blackList and admin tries to approve bob', async () => {
+        const bobBlackListStatus = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus, false)
+
+        await contract.addBlackList(bob, {from: admin})
+
+        const bobBlackListStatus2 = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus2, true)
+
+        await contract.approve(bob, mintAmount, {from: admin}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Spender is in blackList -- Reason given: Spender is in blackList.");
+        })
     });
 
     it('14. admin decrease allowance to bob 50 SPWN', async () => {
@@ -280,26 +406,189 @@ contract('spwn token tests', accounts => {
         assert.equal(bobBalance, zeroBalance)
     });
 
-    it('17. admin burns from bob 100 SPWN', async () => {
+    it('17. bob burns his 100 SPWN', async () => {
         await contract.mint(bob, mintAmount, {from: admin})
         const bobBalanceAfterMint = await contract.balanceOf(bob)
         assert.equal(bobBalanceAfterMint, mintAmount)
 
-        await contract.burn(bob, burnAmount, {from: admin})
+        await contract.setAuthority(bob, {from: admin})
+
+        await contract.burn(burnAmount, {from: bob})
         const bobBalanceAfterBurn = await contract.balanceOf(bob)
         assert.equal(bobBalanceAfterBurn, leftOverAmount)
     });
 
-    it('18. bob burns from bob 100 SPWN', async () => {
+    it('18. admin approves bob 50 SPWN and bob burnFrom all 50 SPWN allowance from admin', async () => {
+        // mint 100 to admin
+        await contract.mint(admin, mintAmount, {from: admin})
+        const adminBalanceAfterMint = await contract.balanceOf(admin)
+        assert.equal(adminBalanceAfterMint, mintAmount)
+
+        // admin approves 50 to bob
+        await contract.approve(bob, allowanceAmount, {from: admin})
+
+        const AdminToBobAllowance = await contract.allowance(admin, bob)
+        assert.equal(AdminToBobAllowance, allowanceAmount)
+
+        // grant bob with mint_burn_role
+        await contract.setAuthority(bob, {from: admin})
+
+        // bob burns 50 from admin=>bob allowance
+        await contract.burnFrom(admin, allowanceAmount, {from: bob})
+
+        // bob should have zero allowance in admin=>bob
+        const AdminToBobAllowanceAfter = await contract.allowance(admin, bob)
+        assert.equal(AdminToBobAllowanceAfter, zeroBalance)
+
+        // admin should have 50 left in balance
+        const adminBalanceAfterBurnFrom = await contract.balanceOf(admin)
+        assert.equal(adminBalanceAfterBurnFrom, allowanceAmount)
+    });
+
+    it('18.1. admin approves bob 50 SPWN and bob tries to burnFrom 100 SPWN allowance from admin', async () => {
+        // mint 100 to admin
+        await contract.mint(admin, mintAmount, {from: admin})
+        const adminBalanceAfterMint = await contract.balanceOf(admin)
+        assert.equal(adminBalanceAfterMint, mintAmount)
+
+        // admin approves 50 to bob
+        contract.approve(bob, allowanceAmount, {from: admin})
+
+        const AdminToBobAllowance = await contract.allowance(admin, bob, {from: admin})
+        assert.equal(AdminToBobAllowance, allowanceAmount)
+
+        await contract.setAuthority(bob, {from: admin})
+
+        // bob burns 50 from admin=>bob allowance
+        await contract.burnFrom(admin, mintAmount, {from: bob}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert ERC20: burn amount exceeds allowance -- Reason given: ERC20: burn amount exceeds allowance.");
+        })
+
+        // bob should have 50 allowance in admin=>bob
+        const AdminToBobAllowanceAfter = await contract.allowance(admin, bob, {from: admin})
+        assert.equal(AdminToBobAllowanceAfter, allowanceAmount)
+
+        // admin should have 100 left in balance
+        const adminBalanceAfterBurnFrom = await contract.balanceOf(admin)
+        assert.equal(adminBalanceAfterBurnFrom, mintAmount)
+    });
+
+    it('18.2. add bob to blackList then mint to him', async () => {
+        const bobBlackListStatus = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus, false)
+
+        await contract.addBlackList(bob, {from: admin})
+
+        const bobBlackListStatus2 = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus2, true)
+
+        await contract.mint(bob, mintAmount, {from: admin}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert To address is in blackList -- Reason given: To address is in blackList.");
+        })
+    });
+
+    it('18.3. add bob to blackList then mint to cetol', async () => {
+        const bobBlackListStatus = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus, false)
+
+        await contract.addBlackList(bob, {from: admin})
+
+        const bobBlackListStatus2 = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus2, true)
+
+        await contract.mint(cetol, mintAmount, {from: bob}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Caller is in blackList -- Reason given: Caller is in blackList.");
+        })
+    });
+
+    it('18.4. bob tries to burn after been added to blackList', async () => {
+        // mint 100 to bob
         await contract.mint(bob, mintAmount, {from: admin})
         const bobBalanceAfterMint = await contract.balanceOf(bob)
         assert.equal(bobBalanceAfterMint, mintAmount)
 
-        await contract.burn(bob, burnAmount, {from: bob}).catch(err => {
-            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Caller is not allowed to burn -- Reason given: Caller is not allowed to burn.")
+        // add bob in blackList
+        const bobBlackListStatus = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus, false)
+
+        await contract.addBlackList(bob, {from: admin})
+
+        const bobBlackListStatus2 = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus2, true)
+
+        await contract.burn(mintAmount, {from: bob}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Caller is in blackList -- Reason given: Caller is in blackList.");
         })
-        const bobBalanceAfterBurn = await contract.balanceOf(bob)
-        assert.equal(bobBalanceAfterBurn, mintAmount)
+    });
+
+    it('18.5. bob tries to burn his allowance from admin after been added to blackList', async () => {
+        // admin approves 50 SPWN to bob
+        await contract.approve(bob, allowanceAmount, {from: admin})
+
+        const AdminToBobAllowance = await contract.allowance(admin, bob)
+        assert.equal(AdminToBobAllowance, allowanceAmount)
+
+        // add bob in blackList
+        const bobBlackListStatus = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus, false)
+
+        await contract.addBlackList(bob, {from: admin})
+
+        const bobBlackListStatus2 = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus2, true)
+
+        await contract.burnFrom(admin, allowanceAmount, {from: bob}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Caller is in blackList -- Reason given: Caller is in blackList.");
+        })
+    });
+
+    it('18.6. bob is not owner and tries to call destroyBlackFunds', async () => {
+        await contract.destroyBlackFunds(admin, {from: bob}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Ownable: caller is not the owner -- Reason given: Ownable: caller is not the owner.");
+        })
+    });
+
+    it('18.7. bob is in blackList and admin calls destroyBlackFunds on bob', async () => {
+        // mint 100 to bob
+        await contract.mint(bob, mintAmount, {from: admin})
+        const bobBalanceAfterMint = await contract.balanceOf(bob)
+        assert.equal(bobBalanceAfterMint, mintAmount)
+
+        // add bob in blackList
+        const bobBlackListStatus = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus, false)
+
+        await contract.addBlackList(bob, {from: admin})
+
+        const bobBlackListStatus2 = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus2, true)
+
+        // destroyBlackFunds for bob
+        await contract.destroyBlackFunds(bob, {from: admin})
+
+        // bob has zero balance
+        const bobBalanceAfter = await contract.balanceOf(bob)
+        assert.equal(bobBalanceAfter, zeroBalance)
+    });
+
+    it('18.8. bob is not in blackList and admin calls destroyBlackFunds on bob', async () => {
+        // mint 100 to bob
+        await contract.mint(bob, mintAmount, {from: admin})
+        const bobBalanceAfterMint = await contract.balanceOf(bob)
+        assert.equal(bobBalanceAfterMint, mintAmount)
+
+        // make sure bob is not in blackList
+        const bobBlackListStatus = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus, false)
+
+        // destroyBlackFunds for bob
+        await contract.destroyBlackFunds(bob, {from: admin}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Address is not in the blackList -- Reason given: Address is not in the blackList.");
+        })
+
+        // bob still has 100 balance
+        const bobBalanceAfter = await contract.balanceOf(bob)
+        assert.equal(bobBalanceAfter, mintAmount)
     });
 
     it('19. mint after stop then resume', async () => {
@@ -370,53 +659,7 @@ contract('spwn token tests', accounts => {
         assert.equal(bobBalanceAfter, mintAmount)
     });
 
-    it('22. grant mint_burn role then call burn with setAuthority', async () => {
-        await contract.mint(bob, mintAmount, {from: admin})
-        const bobBalanceBefore1 = await contract.balanceOf(bob)
-        assert.equal(bobBalanceBefore1, mintAmount)
-
-        await contract.burn(bob, burnAmount, {from: bob}).catch(err => {
-            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Caller is not allowed to burn -- Reason given: Caller is not allowed to burn.")
-        })
-
-        const bobBalanceBefore2 = await contract.balanceOf(bob)
-        assert.equal(bobBalanceBefore2, mintAmount)
-
-        await contract.setAuthority(bob)
-
-        const hasMintBurnRole = await contract.hasRole(MINT_BURN_ROLE, bob)
-        assert.equal(hasMintBurnRole, true)
-
-        await contract.burn(bob, burnAmount, {from: bob})
-
-        const bobBalanceAfter = await contract.balanceOf(bob)
-        assert.equal(bobBalanceAfter, leftOverAmount)
-    });
-
-    it('23. grant mint_burn role then call burn with grantMintBurnRole', async () => {
-        await contract.mint(bob, mintAmount, {from: admin})
-        const bobBalanceBefore1 = await contract.balanceOf(bob)
-        assert.equal(bobBalanceBefore1, mintAmount)
-
-        await contract.burn(bob, burnAmount, {from: bob}).catch(err => {
-            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Caller is not allowed to burn -- Reason given: Caller is not allowed to burn.")
-        })
-
-        const bobBalanceBefore2 = await contract.balanceOf(bob)
-        assert.equal(bobBalanceBefore2, mintAmount)
-
-        await contract.grantMintBurnRole(bob)
-
-        const hasMintBurnRole = await contract.hasRole(MINT_BURN_ROLE, bob)
-        assert.equal(hasMintBurnRole, true)
-
-        await contract.burn(bob, burnAmount, {from: bob})
-
-        const bobBalanceAfter = await contract.balanceOf(bob)
-        assert.equal(bobBalanceAfter, leftOverAmount)
-    });
-
-    it('24. revoke mint_burn role then call mint', async () => {
+    it('22. revoke mint_burn role then call mint', async () => {
         await contract.mint(bob, mintAmount, {from: admin})
         const bobBalanceBefore1 = await contract.balanceOf(bob)
         assert.equal(bobBalanceBefore1, mintAmount)
@@ -434,21 +677,69 @@ contract('spwn token tests', accounts => {
         assert.equal(bobBalanceAfter, mintAmount)
     });
 
-    it('25. revoke mint_burn role then call burn', async () => {
+    it('22.1. grant mint_burn role then call burn with setAuthority', async () => {
         await contract.mint(bob, mintAmount, {from: admin})
         const bobBalanceBefore1 = await contract.balanceOf(bob)
         assert.equal(bobBalanceBefore1, mintAmount)
 
-        await contract.burn(bob, burnAmount, {from: admin})
+        await contract.burn(burnAmount, {from: bob}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Caller is not allowed to burn -- Reason given: Caller is not allowed to burn.")
+        })
+
+        const bobBalanceBefore2 = await contract.balanceOf(bob)
+        assert.equal(bobBalanceBefore2, mintAmount)
+
+        await contract.setAuthority(bob, {from: admin})
+
+        const hasMintBurnRole = await contract.hasRole(MINT_BURN_ROLE, bob)
+        assert.equal(hasMintBurnRole, true)
+
+        await contract.burn(burnAmount, {from: bob})
+
+        const bobBalanceAfter = await contract.balanceOf(bob)
+        assert.equal(bobBalanceAfter, leftOverAmount)
+    });
+
+    it('22.2. grant mint_burn role then call burn with grantMintBurnRole', async () => {
+        await contract.mint(bob, mintAmount, {from: admin})
+        const bobBalanceBefore1 = await contract.balanceOf(bob)
+        assert.equal(bobBalanceBefore1, mintAmount)
+
+        await contract.burn(burnAmount, {from: bob}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Caller is not allowed to burn -- Reason given: Caller is not allowed to burn.")
+        })
+
+        const bobBalanceBefore2 = await contract.balanceOf(bob)
+        assert.equal(bobBalanceBefore2, mintAmount)
+
+        await contract.grantMintBurnRole(bob, {from: admin})
+
+        const hasMintBurnRole = await contract.hasRole(MINT_BURN_ROLE, bob)
+        assert.equal(hasMintBurnRole, true)
+
+        await contract.burn(burnAmount, {from: bob})
+
+        const bobBalanceAfter = await contract.balanceOf(bob)
+        assert.equal(bobBalanceAfter, leftOverAmount)
+    });
+
+    it('22.3. revoke mint_burn role then call burn', async () => {
+        await contract.mint(bob, mintAmount, {from: admin})
+        const bobBalanceBefore1 = await contract.balanceOf(bob)
+        assert.equal(bobBalanceBefore1, mintAmount)
+
+        await contract.grantMintBurnRole(bob, {from: admin})
+
+        await contract.burn(burnAmount, {from: bob})
         const bobBalanceBefore2 = await contract.balanceOf(bob)
         assert.equal(bobBalanceBefore2, leftOverAmount)
 
-        await contract.revokeMintBurnRole(admin)
+        await contract.revokeMintBurnRole(bob, {from: admin})
 
-        const hasMintBurnRole = await contract.hasRole(MINT_BURN_ROLE, admin)
+        const hasMintBurnRole = await contract.hasRole(MINT_BURN_ROLE, bob)
         assert.equal(hasMintBurnRole, false)
 
-        await contract.burn(bob, leftOverAmount, {from: admin}).catch(err => {
+        await contract.burn(leftOverAmount, {from: bob}).catch(err => {
             assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Caller is not allowed to burn -- Reason given: Caller is not allowed to burn.")
         })
 
@@ -457,7 +748,7 @@ contract('spwn token tests', accounts => {
     });
 
     // max supply limitation
-    it('26. max supply limitation', async () => {
+    it('23. max supply limitation', async () => {
         const initTotalSupply = await contract.totalSupply()
         assert.equal(initTotalSupply, 0)
 
@@ -483,7 +774,7 @@ contract('spwn token tests', accounts => {
         const totalSupply2 = await contract.totalSupply()
         assert.equal(totalSupply2, maxTotalSupply)
 
-        await contract.burn(admin, mintAmount, {from: admin})
+        await contract.burn(mintAmount, {from: admin})
 
         await contract.mint(bob, mintAmount, {from: admin})
         const bobBalanceAfter = await contract.balanceOf(bob)
@@ -494,17 +785,17 @@ contract('spwn token tests', accounts => {
     });
 
     // others
-    it('27. admin role check', async () => {
+    it('24. admin role check', async () => {
         const ar = await contract.DEFAULT_ADMIN_ROLE()
         assert.equal(DEFAULT_ADMIN_ROLE, ar)
     });
 
-    it('28. mint_burn role check', async () => {
+    it('25. mint_burn role check', async () => {
         const mr = await contract.MINT_BURN_ROLE()
         assert.equal(MINT_BURN_ROLE, mr)
     });
 
-    it('29. transfer before & after stop', async () => {
+    it('26. transfer before & after stop', async () => {
         const pauseStatusBefore1 = await contract.stopped()
         const pauseStatusBefore2 = await contract.paused()
         assert.equal(pauseStatusBefore1, pauseStatusBefore2)
@@ -535,5 +826,73 @@ contract('spwn token tests', accounts => {
         })
         const bobBalanceAfterStop = await contract.balanceOf(bob)
         assert.equal(bobBalanceAfterStop, leftOverAmount)
+    });
+
+    // black list
+    it('27. add bob in blackList', async () => {
+        const bobBlackListStatus = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus, false)
+
+        await contract.addBlackList(bob, {from: admin})
+
+        const bobBlackListStatus2 = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus2, true)
+    });
+
+    it('28. remove bob from blackList', async () => {
+        const bobBlackListStatus = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus, false)
+
+        await contract.addBlackList(bob, {from: admin})
+
+        const bobBlackListStatus2 = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus2, true)
+
+        await contract.removeBlackList(bob)
+
+        const bobBlackListStatus3 = await contract.getBlackListStatus(bob)
+        assert.equal(bobBlackListStatus3, false)
+    });
+
+    it('29. add owner in blackList', async () => {
+        const currentOwner = await contract.owner()
+        assert.equal(currentOwner, admin)
+
+        const adminBlackListStatus = await contract.getBlackListStatus(admin)
+        assert.equal(adminBlackListStatus, false)
+
+        await contract.addBlackList(admin, {from: admin}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Can not add owner to blackList -- Reason given: Can not add owner to blackList.");
+        })
+    });
+
+    it('30. redeem exceeds balance', async () => {
+        // mint 100 for contract address
+        await contract.mint(contract.address, mintAmount, {from: admin})
+        const contractBalanceBefore = await contract.balanceOf(contract.address)
+        assert.equal(contractBalanceBefore, mintAmount)
+
+        // redeem 200 to owner
+        await contract.redeem(doubleMintAmount, {from: admin}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert redeem can not exceed the balance -- Reason given: redeem can not exceed the balance.");
+        })
+    });
+
+    it('31. redeem success', async () => {
+        // mint 100 for contract address
+        await contract.mint(contract.address, mintAmount, {from: admin})
+        const contractBalanceBefore = await contract.balanceOf(contract.address)
+        assert.equal(contractBalanceBefore, mintAmount)
+
+        // redeem 90 to owner
+        await contract.redeem(burnAmount, {from: admin})
+
+        // owner should have 90 spwn
+        const adminBalanceAfter = await contract.balanceOf(admin)
+        assert.equal(adminBalanceAfter, burnAmount)
+
+        // contract should have 10 spwn left
+        const contractBalanceAfter = await contract.balanceOf(contract.address)
+        assert.equal(contractBalanceAfter, leftOverAmount)
     });
 });

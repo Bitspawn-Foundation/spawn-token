@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.3;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
+import "./BlackList.sol";
 
-contract DSAuth is Ownable, AccessControl {
+contract DSAuth is AccessControl, BlackList {
     bytes32 public constant MINT_BURN_ROLE = keccak256("MINT_BURN_ROLE");
 
     address private _pendingOwner;
@@ -22,6 +22,7 @@ contract DSAuth is Ownable, AccessControl {
 
     // transferOwnership add a pending owner
     function transferOwnership(address newOwner) public override onlyOwner {
+        require(!isBlackListed[newOwner], "Pending owner can not be in blackList");
         require(newOwner != owner(), "Pending owner and current owner need to be different");
         require(newOwner != address(0), "Pending owner can not be zero address");
 
@@ -45,6 +46,7 @@ contract DSAuth is Ownable, AccessControl {
     function acceptOwnership() public {
         require(_pendingOwner != address(0), "Please set pending owner first");
         require(_pendingOwner == msg.sender, "Only pending owner is able to accept the ownership");
+        require(!isBlackListed[msg.sender], "Pending owner can not be in blackList");
 
         address oldOwner = owner();
 
@@ -63,11 +65,15 @@ contract DSAuth is Ownable, AccessControl {
     // setAuthority performs the same action as grantMintBurnRole
     // we need setAuthority() only because the backward compatibility with previous version contract
     function setAuthority(address authorityAddress) public onlyOwner {
+        require(!isBlackListed[authorityAddress], "AuthorityAddress is in blackList");
+
         grantMintBurnRole(authorityAddress);
     }
 
     // grantMintBurnRole grants the MINT_BURN_ROLE role to an address
     function grantMintBurnRole(address account) public onlyOwner {
+        require(!isBlackListed[account], "account is in blackList");
+
         _grantAccess(MINT_BURN_ROLE, account);
     }
 
@@ -86,7 +92,7 @@ contract DSAuth is Ownable, AccessControl {
     // internal function _revokeAccess revokes account with given role
     function _revokeAccess(bytes32 role, address account) internal {
         if (DEFAULT_ADMIN_ROLE == role) {
-            require(account != owner(), "owner cant revoke himself from admin role");
+            require(account != owner(), "owner can not revoke himself from admin role");
         }
 
         revokeRole(role, account);
