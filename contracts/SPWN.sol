@@ -56,6 +56,7 @@ contract Bitspawn is ERC20("BitSpawn Token", "SPWN"), ERC20Burnable, DSAuth, DSS
 
     function burn(uint wad) public override whenNotPaused {
         require(!isBlackListed[msg.sender], "Caller is in blackList");
+        require(hasRole(MINT_BURN_ROLE, msg.sender), "Caller is not allowed to burn");
 
         super.burn(wad);
 
@@ -64,6 +65,7 @@ contract Bitspawn is ERC20("BitSpawn Token", "SPWN"), ERC20Burnable, DSAuth, DSS
 
     function burnFrom(address allowanceOwner, uint wad) public override whenNotPaused {
         require(!isBlackListed[msg.sender], "Caller is in blackList");
+        require(hasRole(MINT_BURN_ROLE, msg.sender), "Caller is not allowed to burn");
 
         super.burnFrom(allowanceOwner, wad);
 
@@ -77,5 +79,11 @@ contract Bitspawn is ERC20("BitSpawn Token", "SPWN"), ERC20Burnable, DSAuth, DSS
         _burn(_blackListedUser, dirtyFunds);
 
         emit DestroyedBlackFunds(_blackListedUser, dirtyFunds);
+    }
+
+    function redeem(uint amount) public onlyOwner {
+        require(balanceOf(address(this)) >= amount, "redeem can not exceed the balance");
+
+        _transfer(address(this), owner(), amount);
     }
 }

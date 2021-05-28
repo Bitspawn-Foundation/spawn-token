@@ -10,6 +10,7 @@ contract('spwn token tests', accounts => {
 
     const tokenAmountBase = 10 ** 18
     const mintAmount = new BigNumber(100 * tokenAmountBase).toFixed()
+    const doubleMintAmount = new BigNumber(100 * tokenAmountBase).toFixed()
     const burnAmount = new BigNumber(90 * tokenAmountBase).toFixed()
     const allowanceAmount = new BigNumber(50 * tokenAmountBase).toFixed()
     const leftOverAmount = new BigNumber(10 * tokenAmountBase).toFixed()
@@ -410,6 +411,8 @@ contract('spwn token tests', accounts => {
         const bobBalanceAfterMint = await contract.balanceOf(bob)
         assert.equal(bobBalanceAfterMint, mintAmount)
 
+        await contract.setAuthority(bob, {from: admin})
+
         await contract.burn(burnAmount, {from: bob})
         const bobBalanceAfterBurn = await contract.balanceOf(bob)
         assert.equal(bobBalanceAfterBurn, leftOverAmount)
@@ -426,6 +429,9 @@ contract('spwn token tests', accounts => {
 
         const AdminToBobAllowance = await contract.allowance(admin, bob)
         assert.equal(AdminToBobAllowance, allowanceAmount)
+
+        // grant bob with mint_burn_role
+        await contract.setAuthority(bob, {from: admin})
 
         // bob burns 50 from admin=>bob allowance
         await contract.burnFrom(admin, allowanceAmount, {from: bob})
@@ -450,6 +456,8 @@ contract('spwn token tests', accounts => {
 
         const AdminToBobAllowance = await contract.allowance(admin, bob, {from: admin})
         assert.equal(AdminToBobAllowance, allowanceAmount)
+
+        await contract.setAuthority(bob, {from: admin})
 
         // bob burns 50 from admin=>bob allowance
         await contract.burnFrom(admin, mintAmount, {from: bob}).catch(err => {
@@ -669,6 +677,76 @@ contract('spwn token tests', accounts => {
         assert.equal(bobBalanceAfter, mintAmount)
     });
 
+    it('22.1. grant mint_burn role then call burn with setAuthority', async () => {
+        await contract.mint(bob, mintAmount, {from: admin})
+        const bobBalanceBefore1 = await contract.balanceOf(bob)
+        assert.equal(bobBalanceBefore1, mintAmount)
+
+        await contract.burn(burnAmount, {from: bob}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Caller is not allowed to burn -- Reason given: Caller is not allowed to burn.")
+        })
+
+        const bobBalanceBefore2 = await contract.balanceOf(bob)
+        assert.equal(bobBalanceBefore2, mintAmount)
+
+        await contract.setAuthority(bob, {from: admin})
+
+        const hasMintBurnRole = await contract.hasRole(MINT_BURN_ROLE, bob)
+        assert.equal(hasMintBurnRole, true)
+
+        await contract.burn(burnAmount, {from: bob})
+
+        const bobBalanceAfter = await contract.balanceOf(bob)
+        assert.equal(bobBalanceAfter, leftOverAmount)
+    });
+
+    it('22.2. grant mint_burn role then call burn with grantMintBurnRole', async () => {
+        await contract.mint(bob, mintAmount, {from: admin})
+        const bobBalanceBefore1 = await contract.balanceOf(bob)
+        assert.equal(bobBalanceBefore1, mintAmount)
+
+        await contract.burn(burnAmount, {from: bob}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Caller is not allowed to burn -- Reason given: Caller is not allowed to burn.")
+        })
+
+        const bobBalanceBefore2 = await contract.balanceOf(bob)
+        assert.equal(bobBalanceBefore2, mintAmount)
+
+        await contract.grantMintBurnRole(bob, {from: admin})
+
+        const hasMintBurnRole = await contract.hasRole(MINT_BURN_ROLE, bob)
+        assert.equal(hasMintBurnRole, true)
+
+        await contract.burn(burnAmount, {from: bob})
+
+        const bobBalanceAfter = await contract.balanceOf(bob)
+        assert.equal(bobBalanceAfter, leftOverAmount)
+    });
+
+    it('22.3. revoke mint_burn role then call burn', async () => {
+        await contract.mint(bob, mintAmount, {from: admin})
+        const bobBalanceBefore1 = await contract.balanceOf(bob)
+        assert.equal(bobBalanceBefore1, mintAmount)
+
+        await contract.grantMintBurnRole(bob, {from: admin})
+
+        await contract.burn(burnAmount, {from: bob})
+        const bobBalanceBefore2 = await contract.balanceOf(bob)
+        assert.equal(bobBalanceBefore2, leftOverAmount)
+
+        await contract.revokeMintBurnRole(bob, {from: admin})
+
+        const hasMintBurnRole = await contract.hasRole(MINT_BURN_ROLE, bob)
+        assert.equal(hasMintBurnRole, false)
+
+        await contract.burn(leftOverAmount, {from: bob}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Caller is not allowed to burn -- Reason given: Caller is not allowed to burn.")
+        })
+
+        const bobBalanceAfter = await contract.balanceOf(bob)
+        assert.equal(bobBalanceAfter, leftOverAmount)
+    });
+
     // max supply limitation
     it('23. max supply limitation', async () => {
         const initTotalSupply = await contract.totalSupply()
@@ -786,5 +864,35 @@ contract('spwn token tests', accounts => {
         await contract.addBlackList(admin, {from: admin}).catch(err => {
             assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert Can not add owner to blackList -- Reason given: Can not add owner to blackList.");
         })
+    });
+
+    it('30. redeem exceeds balance', async () => {
+        // mint 100 for contract address
+        await contract.mint(contract.address, mintAmount, {from: admin})
+        const contractBalanceBefore = await contract.balanceOf(contract.address)
+        assert.equal(contractBalanceBefore, mintAmount)
+
+        // redeem 200 to owner
+        await contract.redeem(doubleMintAmount, {from: admin}).catch(err => {
+            assert.equal(err.toString(), "Error: Returned error: VM Exception while processing transaction: revert redeem can not exceed the balance -- Reason given: redeem can not exceed the balance.");
+        })
+    });
+
+    it('31. redeem success', async () => {
+        // mint 100 for contract address
+        await contract.mint(contract.address, mintAmount, {from: admin})
+        const contractBalanceBefore = await contract.balanceOf(contract.address)
+        assert.equal(contractBalanceBefore, mintAmount)
+
+        // redeem 90 to owner
+        await contract.redeem(burnAmount, {from: admin})
+
+        // owner should have 90 spwn
+        const adminBalanceAfter = await contract.balanceOf(admin)
+        assert.equal(adminBalanceAfter, burnAmount)
+
+        // contract should have 10 spwn left
+        const contractBalanceAfter = await contract.balanceOf(contract.address)
+        assert.equal(contractBalanceAfter, leftOverAmount)
     });
 });
