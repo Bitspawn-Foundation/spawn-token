@@ -28,8 +28,6 @@ contract DSAuth is AccessControl, BlackList {
 
         _pendingOwner = newOwner;
 
-        _setupRole(DEFAULT_ADMIN_ROLE, _pendingOwner);
-
         emit TransferOwnerShip(newOwner);
     }
 
@@ -52,6 +50,7 @@ contract DSAuth is AccessControl, BlackList {
 
         _owner = _pendingOwner;
 
+        _setupRole(DEFAULT_ADMIN_ROLE, _pendingOwner);
         _grantAccess(MINT_BURN_ROLE, _pendingOwner);
 
         _revokeAccess(MINT_BURN_ROLE, oldOwner);
